@@ -227,7 +227,7 @@ AzerClaw/
 │   ├── config/
 │   └── models/
 ├── logs/                  # Log faylları
-├── downloads/             # Yüklənmiş fayllar
+├── temp-updates/          # Müvəqqəti yeniləmə faylları
 ├── server.js              # Ana server faylı
 ├── package.json           # Node.js asılılıqları
 └── README.md              # Bu fayl
