@@ -1,0 +1,15 @@
+{
+  "id": "6cee58fb-0ced-41fd-a458-c123a2d8deed",
+  "name": "AzerClaw",
+  "prompt": "Sənin adın AzerClaw.",
+  "model": "gemini-3.1-flash-live-preview",
+  "provider": "google",
+  "history": [],
+  "session": [],
+  "enabledTools": [],
+  "createdAt": "2026-10-03T15:30:54.403Z",
+  "voice": "Puck",
+  "messageQueue": [],
+  "isTrueLiveMode": false,
+  "isLiveSessionActive": false
+}

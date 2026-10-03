@@ -1,0 +1,36 @@
+{
+  "name": "azerclaw",
+  "version": "1.0.0",
+  "description": "AzerClaw - AI Agent Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node safe-start.js",
+    "dev": "node server.js",
+    "safe": "node safe-start.js"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "google",
+    "live-api",
+    "socket.io",
+    "azerclaw",
+    "azer-claw"
+  ],
+  "type": "commonjs",
+  "dependencies": {
+    "@google/genai": "^2.15.0",
+    "@google/generative-ai": "^0.24.1",
+    "adm-zip": "^0.6.1",
+    "axios": "^1.20.0",
+    "chokidar": "^5.0.0",
+    "cors": "^2.8.6",
+    "decache": "^4.6.2",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "node-cron": "^4.6.0",
+    "ollama": "^0.5.11",
+    "socket.io": "^4.8.3",
+    "untun": "^0.2.2"
+  }
+}

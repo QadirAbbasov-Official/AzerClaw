@@ -1,0 +1,77 @@
+{
+  "providers": {
+    "google": {
+      "name": "Google",
+      "models": [
+        {
+          "id": "gemini-3.1-flash-live-preview",
+          "name": "Gemini 3.1 Flash Live Preview",
+          "description": "En hızlı ve güncel model",
+          "default": true,
+          "supportsThinking": false
+        },
+        {
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash LLM",
+          "description": "Yeni nesil LLM modeli - tool calling ve streaming desteği",
+          "default": false,
+          "supportsThinking": false
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "name": "gemini-2.5-flash",
+          "description": "gemini-2.5-flash",
+          "default": false,
+          "supportsThinking": false
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "name": "gemini-2.5-flash-lite",
+          "description": "gemini-2.5-flash-lite",
+          "default": false,
+          "supportsThinking": false
+        }
+      ]
+    },
+    "ollama": {
+      "name": "Ollama",
+      "models": [
+        {
+          "id": "qwen3:0.6b",
+          "name": "Qwen3 0.6B",
+          "description": "Küçük ve hızlı model",
+          "default": false,
+          "supportsThinking": false
+        },
+        {
+          "id": "llama3.2",
+          "name": "Llama 3.2",
+          "description": "Genel amaçlı model",
+          "default": false,
+          "supportsThinking": false
+        },
+        {
+          "id": "granite4.1:3b",
+          "name": "grantte",
+          "description": "grante modeli",
+          "default": false,
+          "supportsThinking": false
+        },
+        {
+          "id": "qwen3:1.7b",
+          "name": "qwen3:1.7b",
+          "description": "qwen3:1.7b model",
+          "default": false,
+          "supportsThinking": false
+        },
+        {
+          "id": "llama3.1:latest",
+          "name": "llama3.1:latest",
+          "description": "llama3.1:latest",
+          "default": false,
+          "supportsThinking": false
+        }
+      ]
+    }
+  }
+}
