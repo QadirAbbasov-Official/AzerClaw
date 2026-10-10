@@ -209,11 +209,9 @@ AzerClaw/
 │   │   └── CronTask.js
 │   ├── models/            # Modellər
 │   │   ├── ModelManager.js
-│   │   ├── google/
+│   │   └── google/
 │   │   │   ├── GoogleLive.js
 │   │   │   └── GoogleLLM.js
-│   │   └── ollama/
-│   │       └── OllamaAgent.js
 │   ├── system/            # Sistem komponentləri
 │   │   └── UpdateManager.js
 │   ├── storage/           # Saxlama
@@ -388,7 +386,6 @@ Bu layihə [MIT License](LICENSE) altında lisenziyalanmışdır.
 
 ## 🔮 Gələcək Planlar
 
-- [ ] Daha çox AI model dəstəyi
 - [ ] Mobil tətbiq
 - [ ] REST API sənədləşməsi
 - [ ] Docker dəstəyi

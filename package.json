@@ -1,6 +1,6 @@
 {
   "name": "azerclaw",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AzerClaw - AI Agent Management System",
   "main": "server.js",
   "scripts": {
@@ -21,6 +21,8 @@
   "dependencies": {
     "@google/genai": "^2.15.0",
     "@google/generative-ai": "^0.24.1",
+    "ai": "^5.0.0",
+    "@ai-sdk/openai-compatible": "^1.0.0",
     "adm-zip": "^0.6.1",
     "axios": "^1.20.0",
     "chokidar": "^5.0.0",
@@ -29,7 +31,6 @@
     "express": "^5.2.1",
     "multer": "^2.4.0",
     "node-cron": "^4.6.0",
-    "ollama": "^0.5.11",
     "socket.io": "^4.8.3",
     "untun": "^0.2.2"
   }
