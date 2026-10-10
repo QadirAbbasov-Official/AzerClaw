@@ -2,7 +2,7 @@
 
 ![AzerClaw Logo](public/logo/logo.jfif)
 
-![AzerClaw](https://img.shields.io/badge/version-1.0.0-blue)
+![AzerClaw](https://img.shields.io/badge/version-1.0.1-blue)
 ![Node.js](https://img.shields.io/badge/node.js-18%2B-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
