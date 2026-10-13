@@ -79,6 +79,7 @@
             <div id="plugins-list" class="plugins-list tab-content">
                 <div class="plugins-header">
                     <button class="btn-primary" id="upload-plugin-btn" data-lang="uploadPlugin"></button>
+                    <button class="btn-secondary" id="open-plugin-store-btn" data-lang="pluginStore"></button>
                 </div>
                 <div id="plugins-container">
                     <!-- Plugins will be rendered here -->
@@ -377,6 +378,9 @@
                 <button class="close-modal">&times;</button>
             </div>
             <div class="modal-body">
+                <div class="plugin-details-brand">
+                    <img id="plugin-details-icon" class="plugin-details-icon" alt="" hidden>
+                </div>
                 <div class="plugin-info-container">
                     <div class="plugin-info-item">
                         <label data-lang="pluginName"></label>
@@ -640,6 +644,20 @@
                 <button class="btn-secondary close-modal" data-lang="cancel"></button>
                 <button class="btn-primary" id="save-model-btn" data-lang="save"></button>
             </div>
+        </div>
+    </div>
+
+    <div id="plugin-store-modal" class="modal plugin-store-modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-lang="pluginStore"></h3>
+                <button class="close-modal" id="close-plugin-store-btn" type="button" aria-label="Close">&times;</button>
+            </div>
+            <div class="plugin-store-toolbar">
+                <input id="plugin-store-search" type="search" data-lang="pluginStoreSearch" placeholder="Plugin axtar..." autocomplete="off">
+                <button class="btn-secondary" id="refresh-plugin-store-btn" data-lang="pluginStoreCheck"></button>
+            </div>
+            <div class="modal-body" id="plugin-store-container"></div>
         </div>
     </div>
 

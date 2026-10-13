@@ -1,6 +1,6 @@
 {
   "name": "azerclaw",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AzerClaw - AI Agent Management System",
   "main": "server.js",
   "scripts": {

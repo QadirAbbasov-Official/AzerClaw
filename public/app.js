@@ -69,6 +69,10 @@ const manualReconnectBtn = document.getElementById('manual-reconnect-btn');
 
 // Plugin Elements
 const pluginsContainer = document.getElementById('plugins-container');
+const pluginStoreModal = document.getElementById('plugin-store-modal');
+const pluginStoreContainer = document.getElementById('plugin-store-container');
+const pluginStoreSearch = document.getElementById('plugin-store-search');
+let pluginStorePlugins = [];
 const pluginDetailsModal = document.getElementById('plugin-details-modal');
 const pluginUploadModal = document.getElementById('plugin-upload-modal');
 const pluginDeleteModal = document.getElementById('plugin-delete-modal');
@@ -368,6 +372,8 @@ function setupEventListeners() {
             
             if (tab === 'plugins') {
                 loadPlugins();
+                refreshPluginStoreData().catch(error => console.warn('Could not refresh plugin versions:', error));
+                if (pluginStoreModal?.classList.contains('active')) loadPluginStore();
                 setupPluginEventListeners();
             }
         });
@@ -1830,6 +1836,108 @@ async function loadPlugins() {
     }
 }
 
+async function loadPluginStore() {
+    if (!pluginStoreContainer) return;
+    pluginStoreContainer.innerHTML = `<div class="empty-state">${lang.t('pluginStoreLoading')}</div>`;
+    try {
+        await refreshPluginStoreData();
+        renderPluginStore();
+    } catch (error) {
+        pluginStoreContainer.innerHTML = `<div class="empty-state">${lang.t('pluginStoreLoadError')}: ${error.message}</div>`;
+    }
+}
+
+async function refreshPluginStoreData() {
+    const response = await fetch('/api/plugin-store');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Unable to load plugin store.');
+    pluginStorePlugins = data.plugins || [];
+    renderPluginsList();
+    return pluginStorePlugins;
+}
+
+function renderPluginStore() {
+    if (!pluginStoreContainer) return;
+    pluginStoreContainer.innerHTML = '';
+    const searchTerm = pluginStoreSearch?.value.trim().toLocaleLowerCase() || '';
+    const visiblePlugins = pluginStorePlugins.filter(plugin =>
+        `${plugin.name} ${plugin.description || ''}`.toLocaleLowerCase().includes(searchTerm)
+    );
+    if (!visiblePlugins.length) {
+        pluginStoreContainer.innerHTML = `<div class="empty-state">${pluginStorePlugins.length ? lang.t('pluginStoreNoSearchResults') : lang.t('pluginStoreEmpty')}</div>`;
+        return;
+    }
+    visiblePlugins.forEach(plugin => {
+            const card = document.createElement('article');
+            card.className = 'plugin-store-card';
+            const icon = document.createElement('div');
+            icon.className = 'plugin-store-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            if (plugin.iconUrl) {
+                const image = document.createElement('img');
+                image.src = plugin.iconUrl;
+                image.alt = '';
+                image.loading = 'lazy';
+                image.onerror = () => { icon.textContent = '🧩'; };
+                icon.appendChild(image);
+            } else {
+                icon.textContent = '🧩';
+            }
+            const title = document.createElement('div');
+            title.className = 'plugin-store-title';
+            const name = document.createElement('h4');
+            name.textContent = plugin.name;
+            title.appendChild(name);
+            const description = document.createElement('p');
+            description.textContent = plugin.description || lang.t('pluginStoreNoDescription');
+            const versions = document.createElement('p');
+            versions.className = 'plugin-store-versions';
+            versions.textContent = plugin.installed
+                ? `${lang.t('pluginStoreInstalledVersion')}: ${plugin.installedVersion || '—'} · ${lang.t('pluginStoreLatestVersion')}: ${plugin.latestVersion || '—'}`
+                : `${lang.t('pluginStoreLatestVersion')}: ${plugin.latestVersion || '—'}`;
+            const status = document.createElement('span');
+            status.className = `plugin-store-status${plugin.updateAvailable ? ' update' : ''}`;
+            status.textContent = plugin.updateAvailable ? lang.t('pluginStoreUpdateAvailable') : (plugin.installed ? lang.t('pluginStoreInstalled') : '');
+            const actions = document.createElement('div');
+            actions.className = 'plugin-store-actions';
+            const github = document.createElement('a');
+            github.href = plugin.url;
+            github.target = '_blank';
+            github.rel = 'noopener noreferrer';
+            github.textContent = 'GitHub';
+            actions.appendChild(github);
+            if (!plugin.installed || plugin.updateAvailable) {
+                const button = document.createElement('button');
+                button.className = 'btn-primary';
+                button.textContent = plugin.installed ? lang.t('pluginStoreUpdate') : lang.t('pluginStoreInstall');
+                button.addEventListener('click', () => installPluginStorePlugin(plugin.name, plugin.installed, button));
+                actions.appendChild(button);
+            }
+            title.append(status);
+            card.append(icon, title, description, versions, actions);
+            pluginStoreContainer.appendChild(card);
+        });
+}
+
+async function installPluginStorePlugin(pluginName, update, button) {
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = lang.t('pluginStoreInstalling');
+    try {
+        const response = await fetch(`/api/plugin-store/${encodeURIComponent(pluginName)}/${update ? 'update' : 'install'}`, { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || 'Plugin operation failed.');
+        showToast(`${pluginName}: ${lang.t(update ? 'pluginStoreUpdated' : 'pluginInstalled')}`, 'success');
+        if (data.resetWarnings?.length) showToast(lang.t('pluginRuntimeResetWarning'), 'error');
+        await Promise.all([loadPlugins(), refreshPluginStoreData()]);
+        if (pluginStoreModal?.classList.contains('active')) renderPluginStore();
+    } catch (error) {
+        showToast(`${lang.t('pluginInstallError')}: ${error.message}`, 'error');
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
 function renderPluginsList() {
     if (!pluginsContainer) return;
     
@@ -1885,6 +1993,16 @@ function renderPluginsList() {
             <div class="plugin-tools-count">${plugin.tools ? plugin.tools.length : 0} tool</div>
         `;
 
+        const iconPath = typeof plugin.icon === 'string' ? plugin.icon.trim().replace(/\\/g, '/') : '';
+        if (iconPath && !iconPath.startsWith('/') && !iconPath.split('/').some(part => !part || part === '.' || part === '..')) {
+            const icon = document.createElement('img');
+            icon.className = 'plugin-list-icon';
+            icon.alt = '';
+            icon.src = `/plugins/${encodeURIComponent(plugin.name)}/${iconPath.split('/').map(encodeURIComponent).join('/')}`;
+            icon.onerror = () => icon.remove();
+            pluginItem.querySelector('.plugin-item-header').prepend(icon);
+        }
+
         // Add event listeners
         if (!isEnabled) {
             const enableBtn = pluginItem.querySelector('.plugin-enable-btn');
@@ -1899,6 +2017,16 @@ function renderPluginsList() {
 
         const deleteBtn = pluginItem.querySelector('.delete-plugin-btn');
         deleteBtn.addEventListener('click', () => openPluginDeleteModal(plugin.name));
+
+        const storeRelease = pluginStorePlugins.find(item => item.pluginFolderName === plugin.name && item.updateAvailable);
+        if (storeRelease) {
+            const updateBtn = document.createElement('button');
+            updateBtn.className = 'plugin-update-btn';
+            updateBtn.textContent = `⬆ ${lang.t('pluginStoreUpdate')}`;
+            updateBtn.title = `${lang.t('pluginStoreInstalledVersion')}: ${storeRelease.installedVersion} · ${lang.t('pluginStoreLatestVersion')}: ${storeRelease.latestVersion}`;
+            updateBtn.addEventListener('click', () => installPluginStorePlugin(storeRelease.name, true, updateBtn));
+            pluginItem.querySelector('.plugin-actions').prepend(updateBtn);
+        }
 
         pluginsContainer.appendChild(pluginItem);
     });
@@ -1935,6 +2063,17 @@ async function showPluginDetails(pluginName) {
         
         if (data.plugin) {
             const plugin = data.plugin;
+
+            const pluginDetailsIcon = document.getElementById('plugin-details-icon');
+            const iconPath = typeof plugin.icon === 'string' ? plugin.icon.trim().replace(/\\/g, '/') : '';
+            if (iconPath && !iconPath.startsWith('/') && !iconPath.split('/').some(part => !part || part === '.' || part === '..')) {
+                pluginDetailsIcon.hidden = false;
+                pluginDetailsIcon.src = `/plugins/${encodeURIComponent(plugin.name)}/${iconPath.split('/').map(encodeURIComponent).join('/')}`;
+                pluginDetailsIcon.onerror = () => { pluginDetailsIcon.hidden = true; };
+            } else {
+                pluginDetailsIcon.hidden = true;
+                pluginDetailsIcon.removeAttribute('src');
+            }
             
             document.getElementById('plugin-name').textContent = plugin.name;
             document.getElementById('plugin-version').textContent = `v${plugin.version}`;
@@ -1980,6 +2119,21 @@ async function showPluginDetails(pluginName) {
 // Plugin Event Listeners
 function setupPluginEventListeners() {
     console.log('Setting up plugin event listeners...');
+
+    const openStoreButton = document.getElementById('open-plugin-store-btn');
+    if (openStoreButton) openStoreButton.onclick = () => {
+        pluginStoreModal.classList.add('active');
+        pluginStoreModal.setAttribute('aria-hidden', 'false');
+        loadPluginStore();
+    };
+    const refreshStoreButton = document.getElementById('refresh-plugin-store-btn');
+    if (refreshStoreButton) refreshStoreButton.onclick = loadPluginStore;
+    const closeStoreButton = document.getElementById('close-plugin-store-btn');
+    if (closeStoreButton) closeStoreButton.onclick = () => {
+        pluginStoreModal.classList.remove('active');
+        pluginStoreModal.setAttribute('aria-hidden', 'true');
+    };
+    if (pluginStoreSearch) pluginStoreSearch.oninput = renderPluginStore;
 
     // Upload plugin button
     if (uploadPluginBtn) {
@@ -3898,7 +4052,7 @@ socket.on('true-live-session-started', (data) => {
 
 socket.on('true-live-session-stopped', (data) => {
     if (data.agentId === currentAgent?.id) {
-        addSystemMessage('True Live session stopped.');
+        addSystemMessage(lang.t('trueLiveSessionStopped'));
     }
 });
 

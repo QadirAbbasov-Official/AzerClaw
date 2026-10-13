@@ -236,7 +236,8 @@ class PluginManager {
       tools: plugin.toolNames || Object.keys(plugin.tools),
       enabled: plugin.enabled !== false,
       hasGUI: plugin.hasGUI || false,
-      guiFiles: plugin.guiFiles || null
+      guiFiles: plugin.guiFiles || null,
+      icon: plugin.config?.icon || ''
     };
   }
 
@@ -253,7 +254,8 @@ class PluginManager {
       tools: plugin.toolNames || Object.keys(plugin.tools),
       enabled: plugin.enabled !== false,
       hasGUI: plugin.hasGUI || false,
-      guiFiles: plugin.guiFiles || null
+      guiFiles: plugin.guiFiles || null,
+      icon: plugin.config?.icon || ''
     }));
   }
 
@@ -531,12 +533,12 @@ class PluginManager {
   /**
    * Load plugin from zip file
    */
-  async installFromZip(zipPath, removeZip = true) {
+  async installFromZip(zipPath, removeZip = true, pluginNameOverride = null) {
     try {
       console.log(`Installing plugin from zip: ${zipPath}`);
       
       // Extract zip file
-      const pluginName = await this.extractZip(zipPath);
+      const pluginName = await this.extractZip(zipPath, pluginNameOverride);
       
       if (!pluginName) {
         throw new Error('Failed to extract zip file');
@@ -568,7 +570,7 @@ class PluginManager {
   /**
    * Extract zip file
    */
-  async extractZip(zipPath) {
+  async extractZip(zipPath, pluginNameOverride = null) {
     try {
       const zip = new AdmZip(zipPath);
       const zipEntries = zip.getEntries();
@@ -576,6 +578,10 @@ class PluginManager {
       // Determine plugin name and detect main folder in zip
       let pluginName = null;
       let rootFolder = null;
+
+      if (pluginNameOverride && path.basename(pluginNameOverride) !== pluginNameOverride) {
+        throw new Error('Invalid plugin name');
+      }
       
       // Check structure inside zip
       for (const entry of zipEntries) {
@@ -584,7 +590,7 @@ class PluginManager {
         // If entry is a directory and at root level
         if (entry.isDirectory && !entryName.includes('/')) {
           rootFolder = entryName;
-          pluginName = entryName;
+          pluginName = pluginNameOverride || entryName;
           break;
         }
         
@@ -595,7 +601,7 @@ class PluginManager {
             if (!rootFolder) {
               rootFolder = parts[0];
             }
-            pluginName = parts[0];
+            pluginName = pluginNameOverride || parts[0];
             break;
           }
         }
@@ -649,8 +655,35 @@ class PluginManager {
         // If no main folder, extract normally
         zip.extractAllTo(pluginPath, true);
       }
+
+      // Use the plugin's declared name for its installation directory when available.
+      const infoPath = path.join(pluginPath, 'info.json');
+      if (fs.existsSync(infoPath)) {
+        let info = {};
+        try {
+          info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+        } catch (error) {
+          console.warn(`Could not read plugin info.json while installing ${pluginName}:`, error.message);
+        }
+        if (typeof info.name === 'string' && info.name.trim()) {
+          const declaredName = info.name.trim();
+          if (path.basename(declaredName) !== declaredName || declaredName === '.' || declaredName === '..') {
+            fs.rmSync(pluginPath, { recursive: true, force: true });
+            throw new Error('Invalid plugin name in info.json');
+          }
+          if (declaredName !== pluginName) {
+            const declaredPath = path.join(this.pluginsDir, declaredName);
+            if (fs.existsSync(declaredPath)) {
+              fs.rmSync(pluginPath, { recursive: true, force: true });
+              throw new Error(`Plugin directory already exists: ${declaredName}`);
+            }
+            fs.renameSync(pluginPath, declaredPath);
+            pluginName = declaredName;
+          }
+        }
+      }
       
-      console.log(`Extracted zip to: ${pluginPath}`);
+      console.log(`Extracted zip to: ${path.join(this.pluginsDir, pluginName)}`);
       
       return pluginName;
     } catch (error) {

@@ -21,7 +21,7 @@ global.authManager = authManager;
 const lang = getLang();
 
 // Load language setting from config
-const savedLanguage = configManager.get('language') || 'tr';
+const savedLanguage = configManager.get('language') || 'az';
 lang.setLanguage(savedLanguage);
 
 // System modules
@@ -1083,6 +1083,193 @@ app.get('/api/plugins', (req, res) => {
   const plugins = agentManager.getAllPluginsInfo();
   res.json({ plugins });
 });
+
+const pluginStoreOwner = 'QadirAbbasov-Official';
+const pluginStoreRepoPrefix = 'AzerClaw-Plugin-';
+const pluginStoreApi = `https://api.github.com/users/${pluginStoreOwner}/repos?per_page=100&page=1`;
+const pluginStoreHeaders = { Accept: 'application/vnd.github+json', 'User-Agent': 'AzerClaw-Plugin-Store' };
+
+async function getPluginStoreRepos() {
+  const response = await fetch(pluginStoreApi, { headers: pluginStoreHeaders, signal: AbortSignal.timeout(20000) });
+  if (!response.ok) throw new Error(`GitHub repository list request failed (${response.status})`);
+  const repositories = await response.json();
+  return repositories.filter(repo => !repo.private && repo.name.startsWith(pluginStoreRepoPrefix));
+}
+
+function comparePluginVersions(left, right) {
+  const a = String(left || '').replace(/^v/i, '').split(/[.+-]/).map(part => Number.parseInt(part, 10) || 0);
+  const b = String(right || '').replace(/^v/i, '').split(/[.+-]/).map(part => Number.parseInt(part, 10) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0) ? 1 : -1;
+  }
+  return 0;
+}
+
+function safePluginFolderName(value, fallback) {
+  const name = typeof value === 'string' ? value.trim() : '';
+  if (!name || name === '.' || name === '..' || path.basename(name) !== name || /[\\/]/.test(name)) return fallback;
+  return name;
+}
+
+function pluginIconUrl(iconPath, repoName, branch) {
+  if (typeof iconPath !== 'string' || !iconPath.trim()) return '';
+  const normalized = iconPath.trim().replace(/\\/g, '/');
+  if (normalized.startsWith('/') || normalized.split('/').some(part => !part || part === '.' || part === '..')) return '';
+  const encodedPath = normalized.split('/').map(encodeURIComponent).join('/');
+  return `https://raw.githubusercontent.com/${pluginStoreOwner}/${encodeURIComponent(repoName)}/${encodeURIComponent(branch)}/${encodedPath}`;
+}
+
+function backupPluginDirectory(sourcePath, backupPath) {
+  try {
+    fs.renameSync(sourcePath, backupPath);
+    return 'renamed';
+  } catch (error) {
+    if (!['EPERM', 'EACCES', 'EBUSY', 'EXDEV'].includes(error.code)) throw error;
+
+    // Windows can refuse to rename a loaded plugin directory. Copy first so the
+    // original remains recoverable, then remove it before extracting the update.
+    fs.cpSync(sourcePath, backupPath, { recursive: true, errorOnExist: true });
+    try {
+      fs.rmSync(sourcePath, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
+    } catch (removeError) {
+      // Leave the backup in place so the caller can restore it if cleanup was partial.
+      throw removeError;
+    }
+    return 'copied';
+  }
+}
+
+function restorePluginDirectory(backupPath, targetPath) {
+  try {
+    fs.renameSync(backupPath, targetPath);
+  } catch (error) {
+    if (!['EPERM', 'EACCES', 'EBUSY', 'EXDEV'].includes(error.code)) throw error;
+    fs.cpSync(backupPath, targetPath, { recursive: true, errorOnExist: true });
+    fs.rmSync(backupPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
+  }
+}
+
+app.get('/api/plugin-store', async (req, res) => {
+  try {
+    const repositories = await getPluginStoreRepos();
+    const plugins = await Promise.all(repositories.map(async repo => {
+      let latestVersion = '';
+      let pluginFolderName = repo.name;
+      let iconUrl = '';
+      try {
+        const infoUrl = `https://raw.githubusercontent.com/${pluginStoreOwner}/${encodeURIComponent(repo.name)}/${encodeURIComponent(repo.default_branch)}/info.json`;
+        const infoResponse = await fetch(infoUrl, { headers: pluginStoreHeaders, signal: AbortSignal.timeout(10000) });
+        if (infoResponse.ok) {
+          const info = await infoResponse.json();
+          latestVersion = String(info.version || '');
+          pluginFolderName = safePluginFolderName(info.name, repo.name);
+          iconUrl = pluginIconUrl(info.icon, repo.name, repo.default_branch);
+        }
+      } catch (error) {
+        console.warn(`Could not read info.json for ${repo.name}:`, error.message);
+      }
+
+      const pluginPath = path.join(__dirname, 'plugins', pluginFolderName);
+      let installedVersion = '';
+      if (fs.existsSync(pluginPath)) {
+        try {
+          const installedInfo = JSON.parse(fs.readFileSync(path.join(pluginPath, 'info.json'), 'utf8'));
+          installedVersion = String(installedInfo.version || '');
+        } catch (_) { installedVersion = 'unknown'; }
+      }
+
+      return {
+        name: repo.name,
+        pluginFolderName,
+        iconUrl,
+        description: repo.description || '',
+        url: repo.html_url,
+        defaultBranch: repo.default_branch,
+        latestVersion,
+        installedVersion,
+        installed: fs.existsSync(pluginPath),
+        updateAvailable: Boolean(installedVersion && installedVersion !== 'unknown' && latestVersion && comparePluginVersions(latestVersion, installedVersion) > 0)
+      };
+    }));
+    res.json({ plugins });
+  } catch (error) {
+    res.status(502).json({ error: error.message || 'Could not load the GitHub plugin store.' });
+  }
+});
+
+async function installPluginStoreRepo(req, res, updateExisting) {
+  const repoName = String(req.params.repoName || '');
+  if (!repoName.startsWith(pluginStoreRepoPrefix) || !/^[A-Za-z0-9._-]+$/.test(repoName) || repoName === '.' || repoName === '..') return res.status(400).json({ error: 'Invalid plugin repository name.' });
+  let backupPath = null;
+  let zipPath = null;
+  let pluginManager = null;
+  let pluginPath = null;
+  let pluginFolderName = repoName;
+  try {
+    const repoResponse = await fetch(`https://api.github.com/repos/${pluginStoreOwner}/${encodeURIComponent(repoName)}`, { headers: pluginStoreHeaders, signal: AbortSignal.timeout(15000) });
+    if (!repoResponse.ok) throw new Error(`GitHub repository request failed (${repoResponse.status})`);
+    const repo = await repoResponse.json();
+    if (repo.name !== repoName || repo.private) return res.status(404).json({ error: 'Plugin repository was not found.' });
+
+    const infoUrl = `https://raw.githubusercontent.com/${pluginStoreOwner}/${encodeURIComponent(repoName)}/${encodeURIComponent(repo.default_branch)}/info.json`;
+    const infoResponse = await fetch(infoUrl, { headers: pluginStoreHeaders, signal: AbortSignal.timeout(10000) });
+    if (infoResponse.ok) {
+      const info = await infoResponse.json();
+      pluginFolderName = safePluginFolderName(info.name, repoName);
+    }
+    pluginPath = path.join(__dirname, 'plugins', pluginFolderName);
+    const pluginExists = fs.existsSync(pluginPath);
+    if (updateExisting && !pluginExists) return res.status(404).json({ error: 'Plugin is not installed.' });
+    if (!updateExisting && pluginExists) return res.status(409).json({ error: 'Plugin is already installed.' });
+
+    const archiveUrl = `https://api.github.com/repos/${pluginStoreOwner}/${encodeURIComponent(repoName)}/zipball/${encodeURIComponent(repo.default_branch)}`;
+    const archiveResponse = await fetch(archiveUrl, { headers: pluginStoreHeaders, signal: AbortSignal.timeout(60000) });
+    if (!archiveResponse.ok) throw new Error(`GitHub plugin download failed (${archiveResponse.status})`);
+    const archive = Buffer.from(await archiveResponse.arrayBuffer());
+    if (!archive.length || archive.length > 50 * 1024 * 1024) throw new Error('Plugin archive is empty or exceeds 50 MB.');
+
+    const tempDir = path.join(__dirname, 'temp-updates');
+    fs.mkdirSync(tempDir, { recursive: true });
+    zipPath = path.join(tempDir, `store-${crypto.randomUUID()}.zip`);
+    fs.writeFileSync(zipPath, archive);
+
+    const activeAgent = agentManager.agents.values().next().value;
+    if (activeAgent?.toolManager?.pluginManager) {
+      pluginManager = activeAgent.toolManager.pluginManager;
+    } else {
+      const ToolManager = require('./src/tools/ToolManager');
+      const temporaryToolManager = new ToolManager(global.cronManager, null, agentManager, io);
+      await temporaryToolManager.ready;
+      pluginManager = temporaryToolManager.pluginManager;
+    }
+
+    const previousToolNames = getLoadedPluginToolNames();
+    if (updateExisting) {
+      for (const agent of agentManager.agents.values()) agent.toolManager?.pluginManager?.unloadPlugin(pluginFolderName);
+      backupPath = path.join(tempDir, `backup-${repoName}-${crypto.randomUUID()}`);
+      backupPluginDirectory(pluginPath, backupPath);
+    }
+
+    const result = await pluginManager.installFromZip(zipPath, false, pluginFolderName);
+    const runtimeReset = await resetPluginRuntime(previousToolNames);
+    if (backupPath) fs.rmSync(backupPath, { recursive: true, force: true });
+    res.json({ success: true, pluginName: result.pluginName, updated: updateExisting, resetWarnings: runtimeReset.reloadErrors || [] });
+  } catch (error) {
+    if (backupPath && fs.existsSync(backupPath)) {
+      fs.rmSync(pluginPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
+      restorePluginDirectory(backupPath, pluginPath);
+      try { await pluginManager?.loadPlugin(pluginFolderName); } catch (_) { /* Preserve the original install error. */ }
+      await resetPluginRuntime();
+    }
+    console.error(`Plugin store ${updateExisting ? 'update' : 'install'} failed for ${repoName}:`, error);
+    res.status(500).json({ error: error.message || 'Plugin installation failed.' });
+  } finally {
+    if (zipPath && fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+  }
+}
+
+app.post('/api/plugin-store/:repoName/install', (req, res) => installPluginStoreRepo(req, res, false));
+app.post('/api/plugin-store/:repoName/update', (req, res) => installPluginStoreRepo(req, res, true));
 
 // Update Management Routes
 app.get('/api/update/status', (req, res) => {

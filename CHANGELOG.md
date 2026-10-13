@@ -2,24 +2,21 @@
 
 ## ✨ Yeni Xüsusiyyətlər
 
-- **OpenAI-Compatible API dəstəyi:** Ollama sistemi silindi. OpenAI-Compatible API interfeysini dəstəkləyən müxtəlif süni intellekt modellərinə qoşulmaq üçün yeni imkanlar əlavə edildi.
-- **Admin giriş sistemi:** Administratorlar üçün giriş (Login) sistemi əlavə edildi.
-- **Admin profilinin redaktəsi:** Admin profil məlumatlarını dəyişdirmək imkanı yaradıldı.
-- **Agent profil şəkilləri:** Agentlərə fərdi profil şəkilləri əlavə etmək imkanı əlavə edildi.
-- **Agentlərin davamlı saxlanılması:** Agentlərin məlumatları `.db` verilənlər bazasında saxlanılır və sistem yenidən başladıldıqda avtomatik olaraq yüklənir.
-- **Əlavə yeniliklər:** Sistemə bir çox yeni xüsusiyyət və təkmilləşdirmə əlavə edildi.
+- **Plugin mağazası:** Sistemə pluginləri daha rahat tapmaq və idarə etmək üçün yeni plugin mağazası əlavə edildi.
+- **Plugin yeniləmə sistemi:** Mövcud pluginləri yeniləmək imkanı əlavə edildi.
+- **Plugin ikonları:** Pluginlərin interfeysdə daha rahat tanınması üçün fərdi ikonlar əlavə edildi.
 
 ## 🎨 İnterfeys Yenilikləri
 
-- **Sidebar yeniləndi:** Yan menyunun görünüşü və istifadə rahatlığı təkmilləşdirildi.
-- **İdarəetmə interfeysi:** Admin profilinin və agentlərin idarə olunması üçün yeni imkanlar əlavə edildi.
+- **Plugin mağazası interfeysi:** Pluginlərlə işləmək və onları idarə etmək üçün yeni imkanlar əlavə edildi.
+- **Plugin ikonları:** Pluginlərin vizual görünüşü və interfeysdə fərqləndirilməsi təkmilləşdirildi.
 
 ## 🛠️ Xəta Düzəlişləri və Təkmilləşdirmələr
 
 - Müxtəlif sistem xətaları aradan qaldırıldı.
-- Sistemin sabitliyi və işləmə etibarlılığı yaxşılaşdırıldı.
-- Agent məlumatlarının saxlanılması və yenidən yüklənməsi mexanizmi təkmilləşdirildi.
+- Pluginlərin idarə olunması ilə bağlı bəzi problemlər düzəldildi.
+- Sistemin ümumi sabitliyi və istifadə rahatlığı yaxşılaşdırıldı.
 
 ---
 
-**Qeyd:** Bu yeniləmə AI modellərinə qoşulma imkanlarını genişləndirir, agentlərin məlumatlarının qorunmasını yaxşılaşdırır və sistemin idarə edilməsini daha rahat edir.
+**Qeyd:** Bu yeniləmə pluginlərin tapılmasını, idarə olunmasını və yenilənməsini asanlaşdırır, həmçinin interfeysin vizual görünüşünü yaxşılaşdırır.

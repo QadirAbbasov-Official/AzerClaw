@@ -2,7 +2,7 @@
 
 ![AzerClaw Logo](public/logo/logo.jfif)
 
-![AzerClaw](https://img.shields.io/badge/version-1.0.1-blue)
+![AzerClaw](https://img.shields.io/badge/version-1.0.2-blue)
 ![Node.js](https://img.shields.io/badge/node.js-18%2B-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -241,12 +241,14 @@ AzerClaw geniş plugin sistemi təklif edir. Pluginlər aşağıdakı funksional
 
 ```
 plugin-name/
-├── main.js           # Ana plugin kodu
-├── info.json         # Plugin məlumatları
-└── gui/              # İxtiyari GUI
-    ├── gui.js
-    ├── gui.css
-    └── lang.js
+├── main.js       # Əsas plugin kodu
+├── info.json     # Plugin məlumatları
+├── img/          # Plugin ikonları və şəkilləri
+│   └── icon.jfif # Pluginin əsas ikonu
+└── gui/          # İxtiyari qrafik interfeys (GUI)
+    ├── gui.js    # GUI JavaScript kodu
+    ├── gui.css   # GUI dizaynı
+    └── lang.js   # Dil və tərcümə məlumatları
 ```
 
 ### info.json Nümunəsi
@@ -255,6 +257,7 @@ plugin-name/
 {
     "name": "Plugin Adı",
     "version": "1.0.0",
+    "icon": "img/icon.jfif",
     "description": "Plugin təsviri",
     "author": "Qadir Abbasov",
     "category": "category",
